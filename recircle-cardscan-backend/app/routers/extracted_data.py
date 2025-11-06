@@ -1,78 +1,42 @@
 from fastapi import APIRouter, HTTPException
 from typing import List, Dict, Any
-import pandas as pd
-import os
-from app.config import settings
+from app.core.data_store import data_store
 
 router = APIRouter(prefix="/api/v1", tags=["extracted-data"])
 
 @router.get("/extracted-data/{batch_id}")
 async def get_extracted_data(batch_id: str):
-    """Get extracted data for a batch"""
+    """Get extracted data for a batch from memory"""
     try:
-        # Try different possible CSV file names
-        possible_names = [
-            f"{batch_id}_data.csv",
-            f"batch_{batch_id}_data.csv"
-        ]
+        # Get data from memory store
+        records = data_store.get_batch_data(batch_id)
         
-        csv_path = None
-        for name in possible_names:
-            potential_path = os.path.join(settings.OUTPUT_CSV_PATH, name)
-            if os.path.exists(potential_path):
-                csv_path = potential_path
-                break
-        
-        if not csv_path:
-            # List all CSV files in the directory for debugging
-            csv_files = [f for f in os.listdir(settings.OUTPUT_CSV_PATH) if f.endswith('.csv')]
-            print(f"Available CSV files: {csv_files}")
-            print(f"Looking for batch_id: {batch_id}")
-            raise HTTPException(status_code=404, detail=f"Extracted data not found. Available files: {csv_files}")
-        
-
-        
-        # Read CSV file and handle NaN values
-        df = pd.read_csv(csv_path)
-        df = df.fillna('N/A')  # Replace NaN with 'N/A'
-        print(f"CSV columns: {df.columns.tolist()}")
-        print(f"CSV shape: {df.shape}")
-        print(f"First few rows: {df.head()}")
+        if not records:
+            raise HTTPException(status_code=404, detail="No extracted data found for this batch")
         
         # Group by file_id and convert to required format
         result = []
-        for file_id in df['file_id'].unique():
-            file_data = df[df['file_id'] == file_id]
-            filename = file_data['filename'].iloc[0] if 'filename' in df.columns and not file_data['filename'].empty else "unknown"
+        file_groups = {}
+        
+        for record in records:
+            file_id = record.get('file_id')
+            if file_id not in file_groups:
+                file_groups[file_id] = {
+                    "file_id": file_id,
+                    "filename": record.get('filename', 'unknown'),
+                    "extracted_data": []
+                }
             
-            extracted_data = []
-            for _, row in file_data.iterrows():
-                # Handle NaN values properly
-                name = row.get('name', 'N/A')
-                phone = row.get('phone', 'N/A')
-                email = row.get('email', 'N/A')
-                company = row.get('company', 'N/A')
-                designation = row.get('designation', 'N/A')
-                address = row.get('address', 'N/A')
-                
-                # Convert to string and handle NaN
-                extracted_data.append({
-                    "name": str(name) if pd.notna(name) else 'N/A',
-                    "phone": str(phone) if pd.notna(phone) else 'N/A',
-                    "email": str(email) if pd.notna(email) else 'N/A',
-                    "company": str(company) if pd.notna(company) else 'N/A',
-                    "designation": str(designation) if pd.notna(designation) else 'N/A',
-                    "address": str(address) if pd.notna(address) else 'N/A'
-                })
-            
-            result.append({
-                "file_id": file_id,
-                "filename": filename,
-                "extracted_data": extracted_data
+            file_groups[file_id]["extracted_data"].append({
+                "name": record.get('name', 'N/A'),
+                "phone": record.get('phone', 'N/A'),
+                "email": record.get('email', 'N/A'),
+                "company": record.get('company', 'N/A'),
+                "designation": record.get('designation', 'N/A'),
+                "address": record.get('address', 'N/A')
             })
         
-        print(f"Returning {len(result)} files with extracted data")
-        
+        result = list(file_groups.values())
         return result
         
     except Exception as e:

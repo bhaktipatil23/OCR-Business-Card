@@ -2,6 +2,7 @@ from app.services.gemini_service import GeminiService
 from app.services.csv_writer import CSVWriter
 from app.services.pdf_converter import PDFConverter
 from app.core.resource_manager import resource_manager
+from app.core.data_store import data_store
 from app.utils.logger import app_logger
 
 from typing import List, Dict
@@ -14,10 +15,8 @@ class FileProcessor:
     def __init__(self, batch_id: str):
         self.batch_id = batch_id
         self.gemini_service = GeminiService()
-        self.csv_writer = CSVWriter(batch_id)
-        import threading
-        self._csv_lock = threading.Lock()
         self.pdf_converter = PDFConverter()
+        import threading
 
         self.processed_count = 0
         self.processed_files = set()
@@ -122,27 +121,16 @@ class FileProcessor:
         tasks = [process_with_semaphore(file_info) for file_info in files_list]
         await asyncio.gather(*tasks, return_exceptions=True)
         
-        # Write all extracted records to CSV
+        # Store extracted records in memory (CSV will be generated on download)
         final_records = self.all_extracted_records
-        for record in final_records:
-            # Double-check record validity before writing to CSV
-            na_count = sum(1 for field in ['name', 'phone', 'email', 'company', 'designation', 'address'] 
-                          if record.get(field, 'N/A') == 'N/A')
-            
-            if na_count <= 2:
-                csv_records = self._create_csv_records(record)
-                for csv_record in csv_records:
-                    with self._csv_lock:
-                        self.csv_writer.write_record(csv_record)
-            else:
-                pass
+        data_store.store_batch_data(self.batch_id, final_records)
         
         app_logger.info(f"[PROCESSOR] Completed {self.batch_id}: {self.processed_count}/{len(files_list)} files, {len(final_records)} records")
         
         return {
             "status": "completed",
             "total_processed": self.processed_count,
-            "csv_path": self.csv_writer.get_csv_path()
+            "records_count": len(final_records)
         }
     
     def _combine_multi_page_data(self, all_data: List[Dict]) -> List[Dict]:
@@ -201,45 +189,15 @@ class FileProcessor:
         return [merged_record]
     
     def _create_csv_records(self, record: Dict) -> List[Dict]:
-        """Create CSV records with phone number splitting for final output"""
-        records = []
-        
-        phone_str = record.get('phone', 'N/A')
-        phones = []
-        
-        if phone_str and phone_str != 'N/A':
-            for phone in phone_str.split(','):
-                clean_phone = phone.strip()
-                if clean_phone and clean_phone not in phones:
-                    phones.append(clean_phone)
-        
-        email_str = record.get('email', 'N/A')
-        emails = []
-        if email_str and email_str != 'N/A':
-            emails = [e.strip() for e in email_str.split(',') if e.strip()]
-        
-        first_record = {
+        """Create single CSV record per business card"""
+        return [{
             "file_id": record.get('file_id', 'unknown'),
+            "filename": record.get('filename', 'N/A'),
             "name": record.get('name', 'N/A'),
-            "phone": phones[0] if phones else 'N/A',
-            "email": emails[0] if emails else 'N/A',
+            "phone": record.get('phone', 'N/A'),
+            "email": record.get('email', 'N/A'),
             "company": record.get('company', 'N/A'),
             "designation": record.get('designation', 'N/A'),
             "address": record.get('address', 'N/A')
-        }
-        records.append(first_record)
-        
-        for i, phone in enumerate(phones[1:], 1):
-            additional_record = {
-                "file_id": record.get('file_id', 'unknown'),
-                "name": "",
-                "phone": phone,
-                "email": emails[i] if i < len(emails) else "",
-                "company": "",
-                "designation": "",
-                "address": ""
-            }
-            records.append(additional_record)
-        
-        return records
+        }]
     

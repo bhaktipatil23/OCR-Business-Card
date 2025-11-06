@@ -54,9 +54,18 @@ interface DocumentPreviewModalProps {
   isOpen: boolean;
   onClose: () => void;
   fileId: string;
+  extractedData?: Array<{
+    name: string;
+    phone: string;
+    email: string;
+    company: string;
+    designation: string;
+    address: string;
+  }>;
+  filename?: string;
 }
 
-const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({ isOpen, onClose, fileId }) => {
+const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({ isOpen, onClose, fileId, extractedData, filename }) => {
   const [data, setData] = useState<PDFData | null>(null);
   const [loading, setLoading] = useState(false);
   const [editingField, setEditingField] = useState<string | null>(null);
@@ -66,15 +75,40 @@ const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({ isOpen, onC
 
   useEffect(() => {
     if (isOpen && fileId) {
-      fetchPDFData();
+      if (extractedData && extractedData.length > 0) {
+        // Use existing extracted data
+        setData({
+          filename: filename || `${fileId}`,
+          page: 1,
+          document_type: 'business_card',
+          records: extractedData.map((item, index) => ({
+            record_id: index + 1,
+            data: item
+          }))
+        });
+        setLoading(false);
+      } else {
+        // No extracted data available
+        setData({
+          filename: filename || `${fileId}`,
+          page: 1,
+          document_type: 'business_card',
+          records: []
+        });
+        setLoading(false);
+      }
     }
-  }, [isOpen, fileId]);
+  }, [isOpen, fileId, extractedData, filename]);
 
   const fetchPDFData = async () => {
     setLoading(true);
     try {
       console.log('Fetching data for fileId:', fileId);
-      const url = `http://localhost:8000/api/v1/preview/${fileId}`;
+      const hostname = window.location.hostname;
+      const baseUrl = hostname === 'localhost' || hostname === '127.0.0.1' 
+        ? 'http://localhost:8000' 
+        : `http://${hostname}:8000`;
+      const url = `${baseUrl}/api/v1/preview/${fileId}`;
       console.log('Fetching from URL:', url);
       
       const response = await fetch(url);
@@ -124,7 +158,11 @@ const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({ isOpen, onC
     if (!editingField || !data) return;
     
     try {
-      const response = await fetch(`http://localhost:8000/api/v1/preview/${fileId}/update`, {
+      const hostname = window.location.hostname;
+      const baseUrl = hostname === 'localhost' || hostname === '127.0.0.1' 
+        ? 'http://localhost:8000' 
+        : `http://${hostname}:8000`;
+      const response = await fetch(`${baseUrl}/api/v1/preview/${fileId}/update`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ field: editingField, value: editValue })
@@ -183,7 +221,7 @@ const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({ isOpen, onC
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b">
           <div className="flex items-center gap-3">
-            <h2 className="text-2xl font-bold">{data?.filename || 'Loading...'}</h2>
+            <h2 className="text-2xl font-bold">{data?.filename || filename || 'Loading...'}</h2>
             <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-sm">
               Page {data?.page || 1}
             </span>
@@ -213,12 +251,21 @@ const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({ isOpen, onC
               </div>
               <div className="p-4 bg-white">
                 <img
-                  src={`http://localhost:8000/api/v1/preview/${fileId}/image`}
+                  src={`${(() => {
+                    const hostname = window.location.hostname;
+                    return hostname === 'localhost' || hostname === '127.0.0.1' 
+                      ? 'http://localhost:8000' 
+                      : `http://${hostname}:8000`;
+                  })()}/api/v1/preview/${fileId}/image`}
                   alt="Document preview"
                   className="max-w-full h-auto max-h-96 mx-auto border rounded shadow-sm"
                   onLoad={() => console.log('Image loaded successfully')}
                   onError={(e) => {
-                    console.error('Image failed to load:', `http://localhost:8000/api/v1/preview/${fileId}/image`);
+                    const hostname = window.location.hostname;
+                    const baseUrl = hostname === 'localhost' || hostname === '127.0.0.1' 
+                      ? 'http://localhost:8000' 
+                      : `http://${hostname}:8000`;
+                    console.error('Image failed to load:', `${baseUrl}/api/v1/preview/${fileId}/image`);
                     const target = e.target as HTMLImageElement;
                     target.style.display = 'none';
                     target.nextElementSibling?.classList.remove('hidden');

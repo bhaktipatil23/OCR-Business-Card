@@ -1,4 +1,16 @@
-const API_BASE_URL = 'http://localhost:8000/api/v1';
+// Dynamic API base URL that works on different devices
+const getApiBaseUrl = () => {
+  const hostname = window.location.hostname;
+  // If accessing via localhost, use localhost
+  // If accessing via IP, use the same IP for backend
+  if (hostname === 'localhost' || hostname === '127.0.0.1') {
+    return 'http://localhost:8000/api/v1';
+  }
+  // Use the same IP as frontend but port 8000 for backend
+  return `http://${hostname}:8000/api/v1`;
+};
+
+const API_BASE_URL = getApiBaseUrl();
 
 export interface ValidationResult {
   is_business_card: boolean;

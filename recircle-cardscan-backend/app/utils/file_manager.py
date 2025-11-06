@@ -27,7 +27,8 @@ class FileManager:
         
         # Generate safe filename
         file_extension = file.filename.split('.')[-1]
-        safe_filename = f"{file_id}_{file.filename.replace('/', '_').replace('\\', '_')}"
+        clean_filename = file.filename.replace('/', '_').replace('\\', '_')
+        safe_filename = f"{file_id}_{clean_filename}"
         file_path = os.path.join(settings.TEMP_STORAGE_PATH, safe_filename)
         
         # Save file asynchronously

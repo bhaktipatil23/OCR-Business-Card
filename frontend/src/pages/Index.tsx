@@ -11,7 +11,7 @@ const Index = () => {
   const [files, setFiles] = useState<FileData[]>([]);
   const [currentBatchId, setCurrentBatchId] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
-  const [previewModal, setPreviewModal] = useState<{ isOpen: boolean; fileId: string }>({ isOpen: false, fileId: '' });
+  const [previewModal, setPreviewModal] = useState<{ isOpen: boolean; fileId: string; extractedData?: ExtractedData[]; filename?: string }>({ isOpen: false, fileId: '' });
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const uploadedFiles = Array.from(event.target.files || []);
@@ -178,42 +178,31 @@ const Index = () => {
   };
 
   const pollProcessingStatus = async (batchId: string) => {
+    let isCompleted = false;
     const pollInterval = setInterval(async () => {
+      if (isCompleted) {
+        clearInterval(pollInterval);
+        return;
+      }
+      
       try {
         const status = await apiService.getStatus(batchId);
         
-        // Try to get extracted data during processing
-        try {
-          const extractedDataResponse = await apiService.getExtractedData(batchId);
-          console.log('Extracted data response:', extractedDataResponse);
-          setFiles(prev => prev.map(file => {
-            const extractedFile = extractedDataResponse.find(ed => ed.file_id === file.id);
-            console.log(`File ${file.id} extracted data:`, extractedFile?.extracted_data);
-            return {
-              ...file,
-              extractedData: extractedFile?.extracted_data || file.extractedData
-            };
-          }));
-        } catch (extractError) {
-          console.log('Extracted data not ready yet:', extractError);
-        }
-        
         if (status.status === "completed") {
+          isCompleted = true;
+          
           // Final fetch of extracted data
           try {
             const extractedDataResponse = await apiService.getExtractedData(batchId);
-            console.log('Final extracted data response:', extractedDataResponse);
             setFiles(prev => prev.map(file => {
               const extractedFile = extractedDataResponse.find(ed => ed.file_id === file.id);
-              console.log(`Final file ${file.id} extracted data:`, extractedFile?.extracted_data);
               return {
                 ...file,
                 status: file.status === "processing" ? "completed" : file.status,
-                extractedData: extractedFile?.extracted_data || file.extractedData || []
+                extractedData: extractedFile?.extracted_data || []
               };
             }));
           } catch (extractError) {
-            console.log('Final extracted data fetch error:', extractError);
             setFiles(prev => prev.map(file => ({
               ...file,
               status: file.status === "processing" ? "completed" : file.status
@@ -225,6 +214,7 @@ const Index = () => {
           });
           clearInterval(pollInterval);
         } else if (status.status === "failed") {
+          isCompleted = true;
           setFiles(prev => prev.map(file => ({
             ...file,
             status: file.status === "processing" ? "error" : file.status
@@ -238,7 +228,7 @@ const Index = () => {
         console.error("Status polling error:", error);
         clearInterval(pollInterval);
       }
-    }, 1000); // Poll every 1 second for faster updates
+    }, 2000); // Poll every 2 seconds
   };
 
   const handleDownload = () => {
@@ -250,17 +240,27 @@ const Index = () => {
 
   const handleVCFDownload = () => {
     if (currentBatchId) {
-      const vcfUrl = `http://localhost:8000/api/v1/export-vcf/${currentBatchId}`;
+      const hostname = window.location.hostname;
+      const baseUrl = hostname === 'localhost' || hostname === '127.0.0.1' 
+        ? 'http://localhost:8000' 
+        : `http://${hostname}:8000`;
+      const vcfUrl = `${baseUrl}/api/v1/export-vcf/${currentBatchId}`;
       window.open(vcfUrl, '_blank');
     }
   };
 
   const handleFileClick = (fileId: string) => {
-    setPreviewModal({ isOpen: true, fileId });
+    const file = files.find(f => f.id === fileId);
+    setPreviewModal({ 
+      isOpen: true, 
+      fileId,
+      extractedData: file?.extractedData,
+      filename: file?.name
+    });
   };
 
   const closePreviewModal = () => {
-    setPreviewModal({ isOpen: false, fileId: '' });
+    setPreviewModal({ isOpen: false, fileId: '', extractedData: undefined, filename: undefined });
   };
 
   return (
@@ -297,6 +297,8 @@ const Index = () => {
           isOpen={previewModal.isOpen}
           onClose={closePreviewModal}
           fileId={previewModal.fileId}
+          extractedData={previewModal.extractedData}
+          filename={previewModal.filename}
         />
       </main>
     </div>

@@ -30,7 +30,7 @@ async def background_processing(batch_id: str, files_list: list):
         pass
         result = await processor.process_all_files(files_list)
         
-        app_logger.info(f"[OCR] Completed batch {batch_id}, CSV: {result.get('csv_path', 'N/A')}")
+        app_logger.info(f"[OCR] Completed batch {batch_id}, Records: {result.get('records_count', 0)}")
         
         with status_lock:
             processing_status[batch_id] = {
@@ -38,7 +38,7 @@ async def background_processing(batch_id: str, files_list: list):
                 "total_files": len(files_list),
                 "processed": len(files_list),
                 "current_file": None,
-                "csv_path": result["csv_path"]
+                "records_count": result.get("records_count", 0)
             }
         
         app_logger.info(f"[OCR] Batch {batch_id} ready for download")
