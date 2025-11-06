@@ -1,0 +1,73 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
+All colors MUST be HSL.
+*/
+
+@layer base {
+  :root {
+    /* Navy colors */
+    --navy-primary: 225 99% 27%;
+    --navy-dark: 225 99% 20%;
+    --navy-light: 225 99% 35%;
+    
+    /* Blue colors */
+    --blue-light: 225 100% 92%;
+    --blue-accent: 225 99% 27%;
+    
+    /* Status colors */
+    --success: 142 71% 45%;
+    --warning: 38 92% 50%;
+    --error: 0 84% 60%;
+    --pending: 0 0% 42%;
+
+    /* Base tokens */
+    --background: 216 100% 98%;
+    --foreground: 0 0% 10%;
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 10%;
+    --primary: 225 99% 27%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 0 0% 96%;
+    --secondary-foreground: 0 0% 10%;
+    --muted: 0 0% 96%;
+    --muted-foreground: 0 0% 40%;
+    --accent: 225 99% 27%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 0 0% 90%;
+    --input: 0 0% 90%;
+    --ring: 225 99% 27%;
+    --radius: 0.75rem;
+  }
+
+  .dark {
+    --background: 216 70% 10%;
+    --foreground: 0 0% 98%;
+    --card: 216 70% 15%;
+    --card-foreground: 0 0% 98%;
+    --primary: 0 0% 98%;
+    --primary-foreground: 216 70% 15%;
+    --muted: 216 58% 25%;
+    --muted-foreground: 0 0% 60%;
+    --accent: 225 99% 27%;
+    --accent-foreground: 0 0% 98%;
+    --border: 225 58% 25%;
+    --input: 225 58% 25%;
+    --ring: 225 99% 27%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-gradient-to-br from-blue-light/30 via-background to-blue-accent/10;
+    min-height: 100vh;
+  }
+}
