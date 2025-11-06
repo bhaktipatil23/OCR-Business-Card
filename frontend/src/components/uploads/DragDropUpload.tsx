@@ -68,31 +68,31 @@ const DragDropUpload = ({ onUpload, isUploading = false, uploadType, onUploadTyp
   };
 
   return (
-    <div className="w-full max-w-2xl mx-auto space-y-4">
+    <div className="w-full max-w-2xl mx-auto space-y-3 sm:space-y-4 px-2 phone-full-width">
       {/* Upload Type Toggle */}
-      <div className="flex justify-center">
-        <div className="bg-white rounded-xl p-1 shadow-md">
+      <div className="flex justify-center px-2">
+        <div className="bg-white rounded-xl p-1 shadow-md w-full sm:w-auto max-w-sm phone-full-width">
           <button
             onClick={() => onUploadTypeChange('folder')}
-            className={`px-3 py-2 rounded-lg font-medium transition-all duration-300 ${
+            className={`w-1/2 sm:w-auto px-3 py-2 rounded-lg font-medium transition-all duration-300 text-sm sm:text-base touch-target ${
               uploadType === 'folder'
                 ? 'bg-navy-primary text-white shadow-md'
                 : 'text-navy-primary hover:bg-gray-100'
             }`}
           >
             <FolderOpen className="w-4 h-4 inline mr-1" />
-            Folder
+            <span className="phone-small-text">Folder</span>
           </button>
           <button
             onClick={() => onUploadTypeChange('files')}
-            className={`px-4 py-2 rounded-lg font-medium transition-all duration-300 ${
+            className={`w-1/2 sm:w-auto px-3 py-2 rounded-lg font-medium transition-all duration-300 text-sm sm:text-base touch-target ${
               uploadType === 'files'
                 ? 'bg-navy-primary text-white shadow-md'
                 : 'text-navy-primary hover:bg-gray-100'
             }`}
           >
-            <FileImage className="w-4 h-4 inline mr-2" />
-            File Upload
+            <FileImage className="w-4 h-4 inline mr-1" />
+            <span className="phone-small-text">Files</span>
           </button>
         </div>
       </div>
@@ -104,44 +104,45 @@ const DragDropUpload = ({ onUpload, isUploading = false, uploadType, onUploadTyp
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
         className={`
-          relative cursor-pointer bg-gradient-to-r from-navy-primary to-blue-accent rounded-3xl p-6 
+          relative cursor-pointer bg-gradient-to-r from-navy-primary to-blue-accent 
+          rounded-xl sm:rounded-3xl p-4 sm:p-6 
           border-2 border-dashed transition-all duration-300 
-          hover:shadow-2xl hover:scale-[1.02] group shadow-md
+          hover:shadow-2xl group shadow-md phone-full-width
           ${isDragging
-            ? 'border-white bg-gradient-to-r from-navy-primary to-blue-accent shadow-2xl scale-[1.02]' 
+            ? 'border-white bg-gradient-to-r from-navy-primary to-blue-accent shadow-2xl' 
             : 'border-white hover:border-white'
           }
         `}
       >
-        <div className="flex flex-col items-center justify-center text-center space-y-4">
+        <div className="flex flex-col items-center justify-center text-center space-y-3 sm:space-y-4">
           <div className={`
-            w-12 h-12 rounded-2xl bg-white 
+            w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-white 
             flex items-center justify-center shadow-xl transition-transform duration-300
             ${isDragging ? 'scale-110 rotate-6' : 'group-hover:scale-110'}
           `}>
             {isDragging ? (
               uploadType === 'folder' ? (
-                <FolderOpen className="w-6 h-6 text-navy-primary" />
+                <FolderOpen className="w-5 h-5 sm:w-6 sm:h-6 text-navy-primary" />
               ) : (
-                <FileImage className="w-6 h-6 text-navy-primary" />
+                <FileImage className="w-5 h-5 sm:w-6 sm:h-6 text-navy-primary" />
               )
             ) : (
-              <Upload className="w-6 h-6 text-navy-primary" />
+              <Upload className="w-5 h-5 sm:w-6 sm:h-6 text-navy-primary" />
             )}
           </div>
           
-          <div className="space-y-2">
-            <h3 className="text-lg font-bold text-white">
+          <div className="space-y-1 sm:space-y-2">
+            <h3 className="text-base sm:text-lg font-bold text-white phone-small-text">
               {getUploadText()}
             </h3>
-            <p className="text-white/80">
+            <p className="text-sm sm:text-base text-white/80 px-2 phone-small-text leading-tight">
               {getDescriptionText()}
             </p>
           </div>
           
           <button 
             disabled={isUploading}
-            className="px-8 py-3 bg-white text-navy-primary rounded-xl font-medium shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full sm:w-auto px-6 sm:px-8 py-2.5 sm:py-3 bg-white text-navy-primary rounded-lg sm:rounded-xl font-medium shadow-lg hover:shadow-xl transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base min-h-[44px] touch-target"
           >
             {getButtonText()}
           </button>

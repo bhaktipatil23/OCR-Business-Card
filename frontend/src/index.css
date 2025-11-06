@@ -71,3 +71,73 @@ All colors MUST be HSL.
     min-height: 100vh;
   }
 }
+
+@layer utilities {
+  /* Mobile-first responsive utilities */
+  .mobile-container {
+    @apply px-2 sm:px-6 lg:px-8;
+  }
+  
+  .mobile-text {
+    @apply text-sm sm:text-base;
+  }
+  
+  .mobile-button {
+    @apply w-full sm:w-auto px-4 py-2 text-sm sm:text-base;
+  }
+  
+  .mobile-flex {
+    @apply flex flex-col sm:flex-row gap-2 sm:gap-4;
+  }
+  
+  /* Touch-friendly interactions */
+  .touch-target {
+    @apply min-h-[44px] min-w-[44px];
+  }
+  
+  /* Phone-specific overrides */
+  @media (max-width: 480px) {
+    .phone-full-width {
+      width: 100% !important;
+      margin-left: 0 !important;
+      margin-right: 0 !important;
+      max-width: 100% !important;
+    }
+    
+    .phone-small-text {
+      font-size: 12px !important;
+    }
+    
+    .phone-compact {
+      padding: 8px !important;
+    }
+    
+    .phone-stack {
+      flex-direction: column !important;
+    }
+    
+    /* Force mobile layout consistency */
+    .phone-container {
+      padding-left: 8px !important;
+      padding-right: 8px !important;
+      margin: 0 !important;
+    }
+    
+    .phone-no-center {
+      justify-content: flex-start !important;
+    }
+    
+    /* Table mobile fixes */
+    .phone-table {
+      margin-left: -8px !important;
+      margin-right: -8px !important;
+    }
+  }
+  
+  /* Very small screens */
+  @media (max-width: 360px) {
+    .tiny-padding {
+      padding: 4px !important;
+    }
+  }
+}

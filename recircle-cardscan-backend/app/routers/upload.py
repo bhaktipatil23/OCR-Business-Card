@@ -121,7 +121,12 @@ async def validate_batch(batch_id: str):
 async def get_validation_status(batch_id: str):
     """Get validation results for a batch"""
     
-    if batch_id not in validation_storage:
-        raise HTTPException(status_code=404, detail="Validation results not found")
+    app_logger.info(f"[VALIDATION-STATUS] Checking status for batch {batch_id}")
+    app_logger.info(f"[VALIDATION-STATUS] Available batches: {list(validation_storage.keys())}")
     
+    if batch_id not in validation_storage:
+        app_logger.error(f"[VALIDATION-STATUS] Batch not found: {batch_id}")
+        raise HTTPException(status_code=404, detail=f"Validation results not found for batch {batch_id}")
+    
+    app_logger.info(f"[VALIDATION-STATUS] Returning results for batch {batch_id}")
     return validation_storage[batch_id]

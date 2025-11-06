@@ -264,34 +264,36 @@ const Index = () => {
   };
 
   return (
-    <div className="h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col phone-full-width">
       <Navbar />
-      <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-col justify-center">
-        <HeroSection 
-          onUpload={handleFileUpload} 
-          isUploading={isUploading} 
-        />
-        {files.length > 0 && (
-          <div className="space-y-4">
-            <FileTable files={files} onFileClick={handleFileClick} />
-            {currentBatchId && files.some(f => f.status === "completed" && f.validation?.is_business_card !== false) && (
-              <div className="flex justify-center gap-4">
-                <button
-                  onClick={handleDownload}
-                  className="px-6 py-3 bg-navy-primary text-white rounded-lg hover:bg-navy-primary/80 transition-all duration-300 hover:opacity-80 hover:scale-105"
-                >
-                  Download CSV
-                </button>
-                <button
-                  onClick={handleVCFDownload}
-                  className="px-6 py-3 bg-navy-primary text-white rounded-lg hover:bg-navy-primary/80 transition-all duration-300 hover:opacity-80 hover:scale-105"
-                >
-                  Download VCF
-                </button>
-              </div>
-            )}
-          </div>
-        )}
+      <main className="flex-1 w-full mx-auto px-2 sm:px-6 lg:px-8 py-2 sm:py-4 phone-container">
+        <div className={`${files.length > 0 ? 'space-y-3 sm:space-y-6 phone-no-center' : 'flex flex-col justify-center min-h-[calc(100vh-80px)]'} phone-full-width`}>
+          <HeroSection 
+            onUpload={handleFileUpload} 
+            isUploading={isUploading} 
+          />
+          {files.length > 0 && (
+            <div className="space-y-3 sm:space-y-6 phone-full-width">
+              <FileTable files={files} onFileClick={handleFileClick} />
+              {currentBatchId && files.some(f => f.status === "completed" && f.validation?.is_business_card !== false) && (
+                <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center px-2 phone-stack">
+                  <button
+                    onClick={handleDownload}
+                    className="w-full sm:w-auto px-4 sm:px-6 py-2.5 sm:py-3 text-sm sm:text-base bg-navy-primary text-white rounded-lg hover:bg-navy-primary/80 transition-all duration-300 touch-target phone-full-width"
+                  >
+                    Download CSV
+                  </button>
+                  <button
+                    onClick={handleVCFDownload}
+                    className="w-full sm:w-auto px-4 sm:px-6 py-2.5 sm:py-3 text-sm sm:text-base bg-navy-primary text-white rounded-lg hover:bg-navy-primary/80 transition-all duration-300 touch-target phone-full-width"
+                  >
+                    Download VCF
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
         
         <DocumentPreviewModal
           isOpen={previewModal.isOpen}

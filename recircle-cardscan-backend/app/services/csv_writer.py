@@ -8,7 +8,7 @@ class CSVWriter:
     def __init__(self, batch_id: str):
         self.batch_id = batch_id
         self.csv_path = os.path.join(settings.OUTPUT_CSV_PATH, f"{batch_id}_data.csv")
-        self.headers = ["file_id", "filename", "name", "phone", "email", "company", "designation", "address"]
+        self.headers = ["name", "phone", "email", "company", "designation", "address", "remarks"]
         self.written_records: Set[str] = set()
         self._initialize_csv()
     
@@ -37,14 +37,13 @@ class CSVWriter:
         with open(self.csv_path, 'a', newline='', encoding='utf-8') as f:
             writer = csv.writer(f)
             writer.writerow([
-                record.get("file_id", ""),
-                record.get("filename", ""),
                 record.get("name", ""),
                 record.get("phone", ""),
                 record.get("email", ""),
                 record.get("company", ""),
                 record.get("designation", ""),
-                record.get("address", "")
+                record.get("address", ""),
+                ""
             ])
         print(f"✅ Written to CSV: {record['file_id']}")
     
