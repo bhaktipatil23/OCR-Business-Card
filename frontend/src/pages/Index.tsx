@@ -1,17 +1,24 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import Navbar from "@/components/layout/Navbar";
 import HeroSection from "@/components/uploads/HeroSection.tsx";
 import FileTable from "@/components/table/FileTable";
+import DataTable from "@/components/table/DataTable";
+import FormModal from "@/components/ui/FormModal";
 import { FileData, ExtractedData } from "@/components/table/TableRow";
 import DocumentPreviewModal from "@/components/PDFPreviewModal";
 import { toast } from "sonner";
 import { apiService } from "@/services/api";
 
 const Index = () => {
+  const navigate = useNavigate();
   const [files, setFiles] = useState<FileData[]>([]);
   const [currentBatchId, setCurrentBatchId] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [previewModal, setPreviewModal] = useState<{ isOpen: boolean; fileId: string; extractedData?: ExtractedData[]; filename?: string }>({ isOpen: false, fileId: '' });
+  const [allExtractedData, setAllExtractedData] = useState<ExtractedData[]>([]);
+  const [saveModal, setSaveModal] = useState(false);
+  const [emailModal, setEmailModal] = useState(false);
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const uploadedFiles = Array.from(event.target.files || []);
@@ -194,14 +201,21 @@ const Index = () => {
           // Final fetch of extracted data
           try {
             const extractedDataResponse = await apiService.getExtractedData(batchId);
+            const allData: ExtractedData[] = [];
+            
             setFiles(prev => prev.map(file => {
               const extractedFile = extractedDataResponse.find(ed => ed.file_id === file.id);
+              const fileData = extractedFile?.extracted_data || [];
+              allData.push(...fileData);
+              
               return {
                 ...file,
                 status: file.status === "processing" ? "completed" : file.status,
-                extractedData: extractedFile?.extracted_data || []
+                extractedData: fileData
               };
             }));
+            
+            setAllExtractedData(allData);
           } catch (extractError) {
             setFiles(prev => prev.map(file => ({
               ...file,
@@ -250,12 +264,31 @@ const Index = () => {
   };
 
   const handleFileClick = (fileId: string) => {
-    const file = files.find(f => f.id === fileId);
-    setPreviewModal({ 
-      isOpen: true, 
-      fileId,
-      extractedData: file?.extractedData,
-      filename: file?.name
+    // Preview functionality disabled
+  };
+
+  const handleDataChange = (updatedData: ExtractedData[]) => {
+    setAllExtractedData(updatedData);
+  };
+
+  const handleSave = (data: { name: string; team: string; event: string }) => {
+    console.log('Save data:', data, allExtractedData);
+    toast.success('Data saved successfully!');
+  };
+
+  const handleExport = () => {
+    if (currentBatchId) {
+      const downloadUrl = apiService.getDownloadUrl(currentBatchId);
+      window.open(downloadUrl, '_blank');
+    }
+  };
+
+  const handleSendEmail = (data: { name: string; team: string; event: string }) => {
+    navigate('/email', { 
+      state: { 
+        eventData: data, 
+        extractedData: allExtractedData 
+      } 
     });
   };
 
@@ -275,19 +308,30 @@ const Index = () => {
           {files.length > 0 && (
             <div className="space-y-3 sm:space-y-6 phone-full-width">
               <FileTable files={files} onFileClick={handleFileClick} />
-              {currentBatchId && files.some(f => f.status === "completed" && f.validation?.is_business_card !== false) && (
+              
+              {allExtractedData.length > 0 && (
+                <DataTable data={allExtractedData} onDataChange={handleDataChange} />
+              )}
+              
+              {allExtractedData.length > 0 && (
                 <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center px-2 phone-stack">
                   <button
-                    onClick={handleDownload}
-                    className="w-full sm:w-auto px-4 sm:px-6 py-2.5 sm:py-3 text-sm sm:text-base bg-navy-primary text-white rounded-lg hover:bg-navy-primary/80 transition-all duration-300 touch-target phone-full-width"
+                    onClick={() => setSaveModal(true)}
+                    className="w-full sm:w-auto px-4 sm:px-6 py-2.5 sm:py-3 text-sm sm:text-base bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all duration-300 touch-target phone-full-width"
                   >
-                    Download CSV
+                    Save
                   </button>
                   <button
-                    onClick={handleVCFDownload}
-                    className="w-full sm:w-auto px-4 sm:px-6 py-2.5 sm:py-3 text-sm sm:text-base bg-navy-primary text-white rounded-lg hover:bg-navy-primary/80 transition-all duration-300 touch-target phone-full-width"
+                    onClick={handleExport}
+                    className="w-full sm:w-auto px-4 sm:px-6 py-2.5 sm:py-3 text-sm sm:text-base bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all duration-300 touch-target phone-full-width"
                   >
-                    Download VCF
+                    Export
+                  </button>
+                  <button
+                    onClick={() => setEmailModal(true)}
+                    className="w-full sm:w-auto px-4 sm:px-6 py-2.5 sm:py-3 text-sm sm:text-base bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-all duration-300 touch-target phone-full-width"
+                  >
+                    Send Email
                   </button>
                 </div>
               )}
@@ -301,6 +345,20 @@ const Index = () => {
           fileId={previewModal.fileId}
           extractedData={previewModal.extractedData}
           filename={previewModal.filename}
+        />
+        
+        <FormModal
+          isOpen={saveModal}
+          onClose={() => setSaveModal(false)}
+          onSubmit={handleSave}
+          title="Save Data"
+        />
+        
+        <FormModal
+          isOpen={emailModal}
+          onClose={() => setEmailModal(false)}
+          onSubmit={handleSendEmail}
+          title="Send Email"
         />
       </main>
     </div>
