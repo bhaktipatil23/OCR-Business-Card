@@ -35,10 +35,16 @@ class CSVWriter:
         self.written_records.add(record_key)
         
         with open(self.csv_path, 'a', newline='', encoding='utf-8') as f:
-            writer = csv.writer(f)
+            writer = csv.writer(f, quoting=csv.QUOTE_ALL)
+            
+            # Add tab prefix to phone to force text format in Excel
+            phone = record.get("phone", "")
+            if phone and phone != "N/A":
+                phone = "\t" + phone
+            
             writer.writerow([
                 record.get("name", ""),
-                record.get("phone", ""),
+                phone,
                 record.get("email", ""),
                 record.get("company", ""),
                 record.get("designation", ""),

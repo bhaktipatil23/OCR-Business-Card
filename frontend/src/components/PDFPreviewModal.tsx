@@ -154,6 +154,54 @@ const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({ isOpen, onC
     setEditValue(currentValue);
   };
 
+  
+  const fetchDataByEmail = async (email: string) => {
+    if (!email || !email.includes('@')) return;
+    
+    try {
+      const hostname = window.location.hostname;
+      const baseUrl = hostname === 'localhost' || hostname === '127.0.0.1' 
+        ? 'http://localhost:8000' 
+        : `http://${hostname}:8000`;
+      
+      const response = await fetch(`${baseUrl}/api/v1/lookup/email/${encodeURIComponent(email)}`);
+      
+      if (response.ok) {
+        const result = await response.json();
+        if (result.found && result.data) {
+          const currentData = data?.records?.[selectedRecord]?.data || data?.data || {};
+          const updatedData = { ...currentData };
+          
+          if (!updatedData.name || updatedData.name === 'N/A') {
+            updatedData.name = result.data.name;
+          }
+          if (!updatedData.phone || updatedData.phone === 'N/A') {
+            updatedData.phone = result.data.phone;
+          }
+          if (!updatedData.company || updatedData.company === 'N/A') {
+            updatedData.company = result.data.company;
+          }
+          if (!updatedData.designation || updatedData.designation === 'N/A') {
+            updatedData.designation = result.data.designation;
+          }
+          if (!updatedData.address || updatedData.address === 'N/A') {
+            updatedData.address = result.data.address;
+          }
+          
+          if (data?.records) {
+            const newRecords = [...data.records];
+            newRecords[selectedRecord] = { ...newRecords[selectedRecord], data: updatedData };
+            setData({ ...data, records: newRecords });
+          } else {
+            setData({ ...data, data: updatedData });
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Failed to fetch data by email:', error);
+    }
+  };
+
   const handleSave = async () => {
     if (!editingField || !data) return;
     
@@ -278,10 +326,78 @@ const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({ isOpen, onC
               </div>
             </div>
           )}
-          {/* Data Fields - Removed card view display */}
-          {!showImage && (
-            <div className="text-center py-8 text-gray-500">
-              <p>Preview available - click the eye icon to view the document image.</p>
+          {/* Data Fields */}
+          {loading ? (
+            <div className="flex justify-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            </div>
+          ) : data ? (
+            <div className="space-y-0">
+              <div className="mb-4 p-3 bg-gray-100 rounded">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-gray-600">
+                    Document Type: {data.document_type === 'business_card' ? 'Business Card' : 'Delivery Challan'}
+                  </span>
+                </div>
+              </div>
+              {fields.map((field, index) => {
+                const currentData = data.records && data.records.length > 0 
+                  ? data.records[selectedRecord]?.data 
+                  : data.data;
+                
+                return (
+                  <div
+                    key={field.key}
+                    className={`flex items-center justify-between py-3 px-4 ${
+                      index % 2 === 0 ? 'bg-blue-50' : 'bg-white'
+                    }`}
+                  >
+                    <div className="font-medium text-gray-700 w-1/3">{field.label}:</div>
+                    <div className="flex-1 flex items-center justify-between">
+                      {editingField === field.key ? (
+                        <div className="flex items-center gap-2 flex-1">
+                          <input
+                            type="text"
+                            value={editValue}
+                            onChange={(e) => setEditValue(e.target.value)}
+                            onBlur={() => {
+                              if (field.key === 'email' && editValue) {
+                                fetchDataByEmail(editValue);
+                              }
+                            }}
+                            className="flex-1 px-2 py-1 border rounded"
+                            autoFocus
+                          />
+                          <button onClick={handleSave} className="text-green-600 hover:text-green-800">
+                            Save
+                          </button>
+                          <button onClick={handleCancel} className="text-red-600 hover:text-red-800">
+                            Cancel
+                          </button>
+                        </div>
+                      ) : (
+                        <>
+                          <span className="text-gray-600">
+                            {(currentData as any)?.[field.key] || 'N/A'}
+                          </span>
+                          {field.editable && (
+                            <button
+                              onClick={() => handleEdit(field.key, (currentData as any)?.[field.key] || '')}
+                              className="ml-2 p-1 hover:bg-gray-200 rounded"
+                            >
+                              <Edit2 className="w-4 h-4 text-gray-500" />
+                            </button>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="text-center py-8 text-red-600">
+              Failed to load document data
             </div>
           )}
         </div>

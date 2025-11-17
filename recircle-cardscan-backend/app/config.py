@@ -15,6 +15,24 @@ class Settings(BaseSettings):
     GEMINI_API_KEY: str = ""
     GEMINI_MODEL: str = "gemini-2.0-flash-exp"
     
+    # MySQL Database settings
+    DB_HOST: str = "localhost"
+    DB_PORT: int = 3306
+    DB_USER: str = "root"
+    DB_PASSWORD: str = ""
+    DB_NAME: str = "business_card_ocr"
+    
+    DATABASE_URL: str = ""
+    
+    @property
+    def database_url(self) -> str:
+        if self.DATABASE_URL:
+            return self.DATABASE_URL
+        elif self.DB_PASSWORD:
+            return f"mysql+pymysql://{self.DB_USER}:{self.DB_PASSWORD}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
+        else:
+            return f"mysql+pymysql://{self.DB_USER}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
+    
     @property
     def allowed_extensions_list(self) -> List[str]:
         return self.ALLOWED_EXTENSIONS.split(",")

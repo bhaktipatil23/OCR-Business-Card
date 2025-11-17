@@ -24,6 +24,11 @@ class FileProcessor:
         
         self.all_extracted_records = []
         self.records_lock = threading.Lock()
+        
+        # Import processing status from process.py
+        from app.routers.process import processing_status, status_lock
+        self.processing_status = processing_status
+        self.status_lock = status_lock
     
 
     
@@ -34,10 +39,10 @@ class FileProcessor:
         try:
             file_key = f"{file_info['filename']}_{file_info.get('file_id', '')}"
             if file_key in self.processed_files:
-                pass
                 return
             
-            pass
+            # Update current file being processed
+            self._update_processing_status(file_info['filename'])
             
             self.processed_files.add(file_key)
             
@@ -91,14 +96,16 @@ class FileProcessor:
                     
                     if na_count <= 2:
                         self.all_extracted_records.append(record)
-                        pass
+                        app_logger.info(f"[QUEUE] Added record to queue: {record['name']} from {record['filename']}")
                     else:
-                        pass
+                        app_logger.info(f"[QUEUE] Skipped record with too many N/A fields: {record['filename']}")
             
             with self._lock:
                 self.processed_count += 1
                 current_count = self.processed_count
-            pass
+            
+            # Update progress after each file
+            self._update_progress(current_count)
             
         except Exception as e:
             app_logger.error(f"[PROCESSOR] Error with {file_info['filename']}: {str(e)}")
@@ -110,7 +117,7 @@ class FileProcessor:
     
     async def process_all_files(self, files_list: List[Dict]) -> Dict:
         """Process all uploaded files with fair resource allocation"""
-        app_logger.info(f"[PROCESSOR] Processing {len(files_list)} files for {self.batch_id}")
+        app_logger.info(f"[PROCESSOR] Starting queue-based processing for {len(files_list)} files in batch {self.batch_id}")
         
         semaphore = asyncio.Semaphore(3)
         
@@ -119,18 +126,26 @@ class FileProcessor:
                 await self.process_single_file(file_info)
         
         tasks = [process_with_semaphore(file_info) for file_info in files_list]
-        await asyncio.gather(*tasks, return_exceptions=True)
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+        
+        # Log any exceptions
+        for i, result in enumerate(results):
+            if isinstance(result, Exception):
+                app_logger.error(f"[QUEUE] Error processing file {files_list[i]['filename']}: {result}")
         
         # Store extracted records in memory (CSV will be generated on download)
         final_records = self.all_extracted_records
         data_store.store_batch_data(self.batch_id, final_records)
         
+        app_logger.info(f"[QUEUE] All files processed. Queue contains {len(final_records)} records")
         app_logger.info(f"[PROCESSOR] Completed {self.batch_id}: {self.processed_count}/{len(files_list)} files, {len(final_records)} records")
         
         return {
             "status": "completed",
             "total_processed": self.processed_count,
-            "records_count": len(final_records)
+            "records_count": len(final_records),
+            "extracted_data": final_records,
+            "queue_summary": f"Processed {len(files_list)} files, queued {len(final_records)} valid records"
         }
     
     def _combine_multi_page_data(self, all_data: List[Dict]) -> List[Dict]:
@@ -200,4 +215,16 @@ class FileProcessor:
             "designation": record.get('designation', 'N/A'),
             "address": record.get('address', 'N/A')
         }]
+    
+    def _update_processing_status(self, current_filename: str):
+        """Update the current file being processed"""
+        with self.status_lock:
+            if self.batch_id in self.processing_status:
+                self.processing_status[self.batch_id]["current_file"] = current_filename
+    
+    def _update_progress(self, processed_count: int):
+        """Update the progress count"""
+        with self.status_lock:
+            if self.batch_id in self.processing_status:
+                self.processing_status[self.batch_id]["processed"] = processed_count
     

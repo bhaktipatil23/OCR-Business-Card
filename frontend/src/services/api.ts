@@ -80,6 +80,35 @@ export interface ExtractedDataResponse {
   }[];
 }
 
+export interface QueuedDataResponse {
+  status: string;
+  batch_id: string;
+  total_records: number;
+  extracted_data: {
+    file_id: string;
+    filename: string;
+    name: string;
+    phone: string;
+    email: string;
+    company: string;
+    designation: string;
+    address: string;
+  }[];
+}
+
+export interface FileStatusResponse {
+  batch_id: string;
+  files: Record<string, {
+    filename: string;
+    status: string;
+    validation: ValidationResult;
+    extracted_data: any;
+  }>;
+  queue_data: any[];
+}
+
+
+
 class ApiService {
   async uploadFiles(files: File[]): Promise<UploadResponse> {
     const formData = new FormData();
@@ -170,6 +199,95 @@ class ApiService {
 
     return response.json();
   }
+
+  async getQueuedExtractedData(batchId: string): Promise<{
+    status: string;
+    batch_id: string;
+    total_records: number;
+    extracted_data: any[];
+  }> {
+    const response = await fetch(`${API_BASE_URL}/extracted-data/${batchId}`);
+
+    if (!response.ok) {
+      throw new Error(`Failed to get queued extracted data: ${response.statusText}`);
+    }
+
+    return response.json();
+  }
+
+  async startIndividualProcessing(batchId: string): Promise<{
+    status: string;
+    batch_id: string;
+    message: string;
+  }> {
+    const response = await fetch(`${API_BASE_URL}/start-individual-processing`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ batch_id: batchId }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to start individual processing: ${response.statusText}`);
+    }
+
+    return response.json();
+  }
+
+  async getFileStatus(batchId: string): Promise<{
+    batch_id: string;
+    files: Record<string, {
+      filename: string;
+      status: string;
+      validation: any;
+      extracted_data: any;
+    }>;
+    queue_data: any[];
+  }> {
+    const response = await fetch(`${API_BASE_URL}/file-status/${batchId}`);
+
+    if (!response.ok) {
+      throw new Error(`Failed to get file status: ${response.statusText}`);
+    }
+
+    return response.json();
+  }
+
+  async getSavedData(batchId: string): Promise<{
+    status: string;
+    batch_id: string;
+    total_records: number;
+    extracted_data: any[];
+  }> {
+    const response = await fetch(`${API_BASE_URL}/saved-data/${batchId}`);
+
+    if (!response.ok) {
+      throw new Error(`Failed to get saved data: ${response.statusText}`);
+    }
+
+    return response.json();
+  }
+
+  async getRecentBatches(): Promise<{
+    status: string;
+    batches: {
+      batch_id: string;
+      name: string;
+      team: string;
+      event: string;
+    }[];
+  }> {
+    const response = await fetch(`${API_BASE_URL}/recent-batches`);
+
+    if (!response.ok) {
+      throw new Error(`Failed to get recent batches: ${response.statusText}`);
+    }
+
+    return response.json();
+  }
+
+
 }
 
 export const apiService = new ApiService();

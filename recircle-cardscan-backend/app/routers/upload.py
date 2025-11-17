@@ -35,6 +35,8 @@ async def upload_files(files: List[UploadFile] = File(...)):
     app_logger.info(f"[UPLOAD] Batch ID: {batch_id}")
     uploaded_files = []
     
+    # Skip database batch creation
+    
     for file in files:
         # Validate file extension
         if not FileValidator.validate_file_extension(file.filename):
@@ -50,6 +52,8 @@ async def upload_files(files: List[UploadFile] = File(...)):
         # Save file
         file_info = await FileManager.save_uploaded_file(file, file_id)
         uploaded_files.append(file_info)
+        
+        # Skip database record creation
     
     # Store in memory
     batch_storage[batch_id] = uploaded_files
@@ -91,20 +95,26 @@ async def validate_batch(batch_id: str):
     invalid_count = validation_results['validation_summary']['invalid_files']
     app_logger.info(f"[VALIDATION] Results: {valid_count} valid, {invalid_count} invalid")
     
-    # Update file info with validation results
+    # Update file info with validation results and save to database
     for file_info in files_list:
+        validation_result = None
+        
         # Find validation result for this file
         for valid_card in validation_results['valid_business_cards']:
             if valid_card['file_id'] == file_info['file_id']:
-                file_info['validation'] = ValidationResult(**valid_card['validation'])
-                pass
+                validation_result = ValidationResult(**valid_card['validation'])
+                file_info['validation'] = validation_result
                 break
         
         for invalid_file in validation_results['invalid_files']:
             if invalid_file['file_id'] == file_info['file_id']:
-                file_info['validation'] = ValidationResult(**invalid_file['validation'])
-                pass
+                validation_result = ValidationResult(**invalid_file['validation'])
+                file_info['validation'] = validation_result
                 break
+        
+        # Skip database validation update
+    
+    # Skip batch status update
     
     app_logger.info(f"[VALIDATION] Completed validation for batch {batch_id}")
     
