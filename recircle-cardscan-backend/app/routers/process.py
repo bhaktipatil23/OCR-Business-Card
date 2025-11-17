@@ -354,9 +354,10 @@ async def start_individual_processing(
     }
 
 async def process_files_individually(batch_id: str):
-    """Process files one by one and update queue"""
+    """Process files one by one and update queue with WebSocket updates"""
     
     try:
+        from app.services.websocket_manager import websocket_manager
         validation_results = validation_storage[batch_id]
         
         for file_info in batch_storage[batch_id]:
@@ -365,6 +366,15 @@ async def process_files_individually(batch_id: str):
             # Update to validating
             with file_lock:
                 file_status[batch_id][file_id]["status"] = "validating"
+            
+            # WebSocket update - validation started
+            await websocket_manager.broadcast(batch_id, {
+                "type": "file_update",
+                "file_id": file_id,
+                "filename": file_info['filename'],
+                "status": "validating",
+                "progress": 25
+            })
             
             app_logger.info(f"[VALIDATION] Starting validation for {file_info['filename']}")
             await asyncio.sleep(2.0)  # Longer validation time for visibility
@@ -388,6 +398,15 @@ async def process_files_individually(batch_id: str):
             with file_lock:
                 file_status[batch_id][file_id]["validation"] = validation_result
             
+            # WebSocket update - validation result
+            await websocket_manager.broadcast(batch_id, {
+                "type": "validation_result",
+                "file_id": file_id,
+                "filename": file_info['filename'],
+                "is_valid": is_valid,
+                "reasoning": validation_result.get('reasoning', '') if validation_result else ''
+            })
+            
             app_logger.info(f"[VALIDATION] {file_info['filename']} validation result: {'VALID' if is_valid else 'INVALID'}")
             await asyncio.sleep(1.0)  # Pause after validation
             
@@ -395,6 +414,15 @@ async def process_files_individually(batch_id: str):
                 # Update to processing
                 with file_lock:
                     file_status[batch_id][file_id]["status"] = "processing"
+                
+                # WebSocket update - extraction started
+                await websocket_manager.broadcast(batch_id, {
+                    "type": "file_update",
+                    "file_id": file_id,
+                    "filename": file_info['filename'],
+                    "status": "extracting",
+                    "progress": 50
+                })
                 
                 app_logger.info(f"[PROCESSING] Starting OCR extraction for {file_info['filename']}")
                 
@@ -427,6 +455,17 @@ async def process_files_individually(batch_id: str):
                                 })
                                 cards_added += 1
                         
+                        # WebSocket update - extraction complete
+                        await websocket_manager.broadcast(batch_id, {
+                            "type": "extraction_complete",
+                            "file_id": file_id,
+                            "filename": file_info['filename'],
+                            "status": "completed",
+                            "progress": 100,
+                            "extracted_data": extracted_records[0] if extracted_records else {},
+                            "cards_count": cards_added
+                        })
+                        
                         app_logger.info(f"[COMPLETED] {file_info['filename']} processed successfully - {cards_added} cards extracted")
                     else:
                         # No data extracted
@@ -445,6 +484,15 @@ async def process_files_individually(batch_id: str):
                 with file_lock:
                     file_status[batch_id][file_id]["status"] = "invalid"
                 
+                # WebSocket update - invalid file
+                await websocket_manager.broadcast(batch_id, {
+                    "type": "file_update",
+                    "file_id": file_id,
+                    "filename": file_info['filename'],
+                    "status": "invalid",
+                    "progress": 100
+                })
+                
                 app_logger.info(f"[INVALID] {file_info['filename']} marked as invalid business card")
         
         # Mark batch as completed
@@ -459,6 +507,16 @@ async def process_files_individually(batch_id: str):
         # Store in data store for CSV export
         from app.core.data_store import data_store
         data_store.store_batch_data(batch_id, file_queue[batch_id])
+        
+        # WebSocket update - batch complete
+        await websocket_manager.broadcast(batch_id, {
+            "type": "batch_complete",
+            "batch_id": batch_id,
+            "total_files": len(batch_storage[batch_id]),
+            "completed_files": len([f for f in file_status[batch_id].values() if f["status"] == "completed"]),
+            "total_records": len(file_queue[batch_id]),
+            "download_url": f"/api/v1/download/{batch_id}"
+        })
         
         app_logger.info(f"[QUEUE] Batch {batch_id} completed with {len(file_queue[batch_id])} records in queue")
         

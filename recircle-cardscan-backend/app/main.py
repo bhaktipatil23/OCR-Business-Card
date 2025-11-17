@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.routers import upload, process, download, pdf_preview_simple, vcf_export, prompt_manager, extracted_data, save_data
+from app.routers import upload, process, download, pdf_preview_simple, vcf_export, prompt_manager, extracted_data, save_data, process_single, websocket_router
 from app.config import settings
 import os
 import logging
@@ -33,6 +33,8 @@ app.add_middleware(
 # Include routers
 app.include_router(upload.router)
 app.include_router(process.router)
+app.include_router(process_single.router)
+app.include_router(websocket_router.router)
 app.include_router(download.router)
 app.include_router(pdf_preview_simple.router, prefix="/api/v1")
 app.include_router(vcf_export.router, prefix="/api/v1")

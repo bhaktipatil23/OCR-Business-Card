@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>WebSocket OCR Processing</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .file-card { border: 1px solid #ccc; margin: 10px 0; padding: 15px; border-radius: 5px; }
+        .status { font-weight: bold; }
+        .progress-bar { width: 100%; height: 20px; background: #f0f0f0; border-radius: 10px; overflow: hidden; }
+        .progress-fill { height: 100%; background: #4CAF50; transition: width 0.3s; }
+        .extracted-data { background: #f9f9f9; padding: 10px; margin-top: 10px; border-radius: 3px; }
+        .summary { background: #e3f2fd; padding: 15px; margin: 20px 0; border-radius: 5px; }
+        .invalid { background: #ffebee; }
+        .completed { background: #e8f5e8; }
+        .processing { background: #fff3e0; }
+    </style>
+</head>
+<body>
+    <h1>WebSocket OCR Processing Demo</h1>
+    
+    <div class="summary" id="summary">
+        <h3>Batch Summary</h3>
+        <p>Total: <span id="total">0</span> | Completed: <span id="completed">0</span> | Processing: <span id="processing">0</span> | Waiting: <span id="waiting">0</span> | Failed: <span id="failed">0</span></p>
+        <div class="progress-bar">
+            <div class="progress-fill" id="overall-progress" style="width: 0%"></div>
+        </div>
+    </div>
+    
+    <div id="files-container"></div>
+    
+    <div id="download-section" style="display: none;">
+        <h3>Processing Complete!</h3>
+        <button onclick="downloadCSV()" style="padding: 10px 20px; background: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer;">Download CSV</button>
+    </div>
+    
+    <script>
+        // Replace with your actual batch_id from upload
+        const BATCH_ID = 'batch_20251117_152343'; // Change this to your batch ID
+        const ws = new WebSocket(`ws://localhost:8000/ws/${BATCH_ID}`);
+        
+        let downloadUrl = '';
+        
+        ws.onopen = function() {
+            console.log('Connected to WebSocket');
+            document.getElementById('summary').innerHTML += '<p style="color: green;">✅ Connected to WebSocket - Processing will start automatically</p>';
+        };
+        
+        ws.onmessage = function(event) {
+            const message = JSON.parse(event.data);
+            console.log('Received:', message);
+            
+            switch(message.type) {
+                case 'initial_status':
+                    initializeFiles(message.files);
+                    updateSummary(message.summary);
+                    break;
+                    
+                case 'file_update':
+                    updateFileStatus(message.file_id, message.status, message.progress, message.stage);
+                    break;
+                    
+                case 'validation_result':
+                    showValidationResult(message.file_id, message.is_valid, message.reasoning);
+                    break;
+                    
+                case 'extraction_complete':
+                    showExtractedData(message.file_id, message.extracted_data);
+                    break;
+                    
+                case 'batch_update':
+                    updateSummary(message.summary);
+                    break;
+                    
+                case 'batch_complete':
+                    showBatchComplete(message.download_url);
+                    break;
+                    
+                case 'error':
+                    showError(message.file_id, message.error);
+                    break;
+            }
+        };
+        
+        ws.onclose = function() {
+            console.log('WebSocket disconnected');
+            document.getElementById('summary').innerHTML += '<p style="color: red;">❌ WebSocket disconnected</p>';
+        };
+        
+        function initializeFiles(files) {
+            const container = document.getElementById('files-container');
+            container.innerHTML = '<h3>Files Processing</h3>';
+            
+            files.forEach(file => {
+                const fileCard = document.createElement('div');
+                fileCard.className = 'file-card';
+                fileCard.id = `file-${file.file_id}`;
+                fileCard.innerHTML = `
+                    <h4>${file.filename}</h4>
+                    <div class="status" id="status-${file.file_id}">Waiting...</div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progress-${file.file_id}" style="width: 0%"></div>
+                    </div>
+                    <div id="result-${file.file_id}"></div>
+                `;
+                container.appendChild(fileCard);
+            });
+        }
+        
+        function updateFileStatus(fileId, status, progress, stage) {
+            const statusElement = document.getElementById(`status-${fileId}`);
+            const progressElement = document.getElementById(`progress-${fileId}`);
+            const fileCard = document.getElementById(`file-${fileId}`);
+            
+            const statusText = {
+                'processing': '🔄 Processing...',
+                'validating': '🔍 Validating...',
+                'extracting': '🤖 Extracting data...',
+                'processing_data': '📊 Processing data...',
+                'completed': '✅ Completed',
+                'invalid': '❌ Invalid business card',
+                'extraction_failed': '⚠️ Extraction failed',
+                'failed': '❌ Failed'
+            };
+            
+            if (statusElement) {
+                statusElement.textContent = statusText[status] || status;
+            }
+            
+            if (progressElement) {
+                progressElement.style.width = `${progress}%`;
+            }
+            
+            // Update card styling
+            if (fileCard) {
+                fileCard.className = 'file-card ' + status;
+            }
+        }
+        
+        function showValidationResult(fileId, isValid, reasoning) {
+            const resultElement = document.getElementById(`result-${fileId}`);
+            if (resultElement) {
+                resultElement.innerHTML = `
+                    <div style="margin-top: 10px; padding: 8px; background: ${isValid ? '#e8f5e8' : '#ffebee'}; border-radius: 3px;">
+                        <strong>Validation:</strong> ${isValid ? 'Valid business card' : 'Not a business card'}<br>
+                        <small>${reasoning}</small>
+                    </div>
+                `;
+            }
+        }
+        
+        function showExtractedData(fileId, data) {
+            const resultElement = document.getElementById(`result-${fileId}`);
+            if (resultElement) {
+                resultElement.innerHTML = `
+                    <div class="extracted-data">
+                        <strong>Extracted Data:</strong><br>
+                        <strong>Name:</strong> ${data.name || 'N/A'}<br>
+                        <strong>Phone:</strong> ${data.phone || 'N/A'}<br>
+                        <strong>Email:</strong> ${data.email || 'N/A'}<br>
+                        <strong>Company:</strong> ${data.company || 'N/A'}<br>
+                        <strong>Designation:</strong> ${data.designation || 'N/A'}<br>
+                        <strong>Address:</strong> ${data.address || 'N/A'}
+                    </div>
+                `;
+            }
+        }
+        
+        function updateSummary(summary) {
+            document.getElementById('total').textContent = summary.total;
+            document.getElementById('completed').textContent = summary.completed;
+            document.getElementById('processing').textContent = summary.processing;
+            document.getElementById('waiting').textContent = summary.waiting;
+            document.getElementById('failed').textContent = summary.failed;
+            
+            const percentage = summary.total > 0 ? (summary.completed / summary.total) * 100 : 0;
+            document.getElementById('overall-progress').style.width = `${percentage}%`;
+        }
+        
+        function showBatchComplete(downloadUrlParam) {
+            downloadUrl = downloadUrlParam;
+            document.getElementById('download-section').style.display = 'block';
+            document.getElementById('summary').innerHTML += '<p style="color: green; font-weight: bold;">🎉 All files processed successfully!</p>';
+        }
+        
+        function showError(fileId, error) {
+            const resultElement = document.getElementById(`result-${fileId}`);
+            if (resultElement) {
+                resultElement.innerHTML = `
+                    <div style="margin-top: 10px; padding: 8px; background: #ffebee; border-radius: 3px; color: red;">
+                        <strong>Error:</strong> ${error}
+                    </div>
+                `;
+            }
+        }
+        
+        function downloadCSV() {
+            if (downloadUrl) {
+                window.open(`http://localhost:8000${downloadUrl}`, '_blank');
+            }
+        }
+        
+        // Send ping every 30 seconds to keep connection alive
+        setInterval(() => {
+            if (ws.readyState === WebSocket.OPEN) {
+                ws.send('ping');
+            }
+        }, 30000);
+    </script>
+</body>
+</html>

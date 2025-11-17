@@ -57,14 +57,19 @@ async def upload_files(files: List[UploadFile] = File(...)):
     
     # Store in memory
     batch_storage[batch_id] = uploaded_files
-    app_logger.info(f"[UPLOAD] Completed: {len(uploaded_files)} files uploaded")
+    
+    # Initialize queue with uploaded files
+    from app.services.queue_manager import queue_manager
+    queue_manager.initialize_batch(batch_id, uploaded_files)
+    
+    app_logger.info(f"[UPLOAD] Completed: {len(uploaded_files)} files uploaded and queued")
     
     return UploadResponse(
         status="success",
         batch_id=batch_id,
         uploaded_files=[FileInfo(**f) for f in uploaded_files],
         total_count=len(uploaded_files),
-        message="Files uploaded successfully. Please validate before processing."
+        message=f"Files uploaded successfully. WebSocket: ws://localhost:8000/ws/{batch_id}"
     )
 
 @router.post("/validate/{batch_id}")

@@ -11,19 +11,19 @@ async def download_csv(batch_id: str):
     try:
         import csv
         import tempfile
+        from app.services.queue_manager import queue_manager
         
-        # Try to get from memory store first
-        try:
-            from app.core.data_store import data_store
-            cards_data = data_store.get_batch_data(batch_id)
-        except:
-            cards_data = []
+        # Get completed data from output queue
+        cards_data = queue_manager.get_all_outputs(batch_id)
         
-        # If no data in memory store, get from save-data request storage
+        # Fallback to save-data request storage
         if not cards_data:
-            from app.routers.save_data import last_request_data
-            if hasattr(last_request_data, 'get') and last_request_data.get('batch_id') == batch_id:
-                cards_data = last_request_data.get('extracted_data', [])
+            try:
+                from app.routers.save_data import last_request_data
+                if last_request_data.get('batch_id') == batch_id:
+                    cards_data = last_request_data.get('extracted_data', [])
+            except:
+                pass
         
         if not cards_data:
             raise HTTPException(status_code=404, detail="No recent data found for this session")
