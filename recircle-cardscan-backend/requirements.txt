@@ -45,5 +45,7 @@ google-generativeai==0.8.3
 
 # MySQL Database
 sqlalchemy==2.0.23
+mysql-connector-python==8.2.0
+pymysql==1.1.0
 mysqlclient==2.2.0
 alembic==1.12.1

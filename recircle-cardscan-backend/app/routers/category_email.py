@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.core.database import get_db
+from app.services.email_service import email_service
 from app.models.database import BusinessCard
 from pydantic import BaseModel
 from typing import List, Optional
@@ -72,9 +73,13 @@ async def send_event_email(request: EventEmailRequest, db: Session = Depends(get
             try:
                 name = contact.name or "Dear Contact"
                 personalized_message = f"Dear {name},\n\n{request.message}"
-                
-                # Simulate email sending
-                email_sent = await simulate_send_email(contact.email, request.subject, personalized_message)
+
+                # Send email using real SMTP service
+                email_sent = await email_service.send_email(
+                    to_email=contact.email,
+                    subject=request.subject,
+                    message=personalized_message
+                )
                 
                 results.append({
                     "email": contact.email,
@@ -112,7 +117,3 @@ async def send_event_email(request: EventEmailRequest, db: Session = Depends(get
         logger.error(f"Error in category email sending: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")
 
-async def simulate_send_email(email: str, subject: str, message: str) -> bool:
-    """Simulate email sending"""
-    logger.info(f"Sending event email to {email}: {subject}")
-    return True

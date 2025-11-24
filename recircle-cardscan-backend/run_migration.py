@@ -116,11 +116,11 @@ class MigrationRunner:
         """Get list of already executed migrations"""
         try:
             cursor = self.connection.cursor()
-            cursor.execute("USE business_card_ocr")
+            cursor.execute(f"USE {settings.DB_NAME}")
             cursor.execute("""
-                SELECT migration_name 
-                FROM migration_log 
-                WHERE success = TRUE 
+                SELECT migration_name
+                FROM migration_log
+                WHERE success = TRUE
                 ORDER BY executed_at
             """)
             executed = [row[0] for row in cursor.fetchall()]
@@ -176,16 +176,16 @@ class MigrationRunner:
         
         try:
             cursor = self.connection.cursor()
-            cursor.execute("USE business_card_ocr")
-            
+            cursor.execute(f"USE {settings.DB_NAME}")
+
             # Show tables
             cursor.execute("SHOW TABLES")
             tables = [row[0] for row in cursor.fetchall()]
-            
+
             print("\n" + "="*50)
             print("DATABASE SCHEMA INFORMATION")
             print("="*50)
-            print(f"Database: business_card_ocr")
+            print(f"Database: {settings.DB_NAME}")
             print(f"Tables: {len(tables)}")
             
             for table in tables:
@@ -201,15 +201,15 @@ class MigrationRunner:
             
             # Show foreign keys
             print(f"\n--- Foreign Key Constraints ---")
-            cursor.execute("""
-                SELECT 
+            cursor.execute(f"""
+                SELECT
                     CONSTRAINT_NAME,
                     TABLE_NAME,
                     COLUMN_NAME,
                     REFERENCED_TABLE_NAME,
                     REFERENCED_COLUMN_NAME
-                FROM information_schema.KEY_COLUMN_USAGE 
-                WHERE TABLE_SCHEMA = 'business_card_ocr' 
+                FROM information_schema.KEY_COLUMN_USAGE
+                WHERE TABLE_SCHEMA = '{settings.DB_NAME}'
                   AND REFERENCED_TABLE_NAME IS NOT NULL
             """)
             

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import Navbar from "@/components/layout/Navbar";
 import { toast } from "sonner";
+import { apiService } from "@/services/api";
 
 interface ExtractedData {
   name: string;
@@ -20,7 +21,22 @@ const EmailPage = () => {
   const [emailData, setEmailData] = useState({
     to: '',
     subject: 'Partnership Opportunity with ReCircle - Sustainable Business Solutions',
-    body: `Dear Business Partner,\n\nI hope this email finds you well. I am writing to introduce you to ReCircle, an innovative company focused on sustainable business solutions and circular economy practices.\n\nReCircle specializes in:\n• Sustainable waste management solutions\n• Circular economy consulting\n• Environmental impact reduction strategies\n• Green technology implementation\n\nWe believe there could be excellent synergy between our organizations and would love to explore potential partnership opportunities.\n\nWould you be available for a brief call next week to discuss how we might collaborate?\n\nBest regards,\n${eventData?.name || 'Your Name'}\n${eventData?.team || 'Your Team'}`
+    body: `Dear {{name}},
+
+I hope this email finds you well. I am writing to introduce you to ReCircle, an innovative company focused on sustainable business solutions and circular economy practices.
+
+ReCircle specializes in:
+• Sustainable waste management solutions
+• Circular economy consulting
+• Environmental impact reduction strategies
+• Green technology implementation
+
+We believe there could be excellent synergy between our organizations and would love to explore potential partnership opportunities.
+
+Would you be available for a brief call next week to discuss how we might collaborate?
+
+Best regards,
+${eventData?.name || 'Your Name'}${(eventData?.team && eventData?.team !== eventData?.name) ? `\n${eventData?.team}` : ''}`
   });
   const [filterType, setFilterType] = useState('send-all');
   const [selectedPeople, setSelectedPeople] = useState<string[]>([]);
@@ -44,12 +60,31 @@ const EmailPage = () => {
     );
   };
   
-  const handleSendEmail = () => {
+  const handleSendEmail = async () => {
     if (selectedPeople.length === 0) {
       toast.error('Please select at least one recipient');
       return;
     }
-    toast.success(`Email sent to ${selectedPeople.length} recipient(s)`);
+
+    try {
+      toast.loading('Sending emails...', { id: 'sending-emails' });
+
+      const result = await apiService.sendBulkEmail(
+        selectedPeople,
+        emailData.subject,
+        emailData.body
+      );
+
+      toast.success(
+        `Successfully sent ${result.successful} email(s)${result.failed > 0 ? `, ${result.failed} failed` : ''}`,
+        { id: 'sending-emails' }
+      );
+
+      console.log('Email sending results:', result);
+    } catch (error) {
+      console.error('Error sending emails:', error);
+      toast.error('Failed to send emails. Please try again.', { id: 'sending-emails' });
+    }
   };
   
   return (
@@ -100,7 +135,10 @@ const EmailPage = () => {
             
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">BODY</label>
-              <textarea 
+              <div className="text-xs text-gray-500 mb-1">
+                Tip: Use {`{{name}}`} to personalize with recipient's name
+              </div>
+              <textarea
                 value={emailData.body}
                 onChange={(e) => setEmailData({...emailData, body: e.target.value})}
                 rows={8}

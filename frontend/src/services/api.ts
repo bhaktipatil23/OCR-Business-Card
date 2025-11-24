@@ -287,6 +287,35 @@ class ApiService {
     return response.json();
   }
 
+  async sendBulkEmail(emails: string[], subject: string, message: string): Promise<{
+    total_emails: number;
+    successful: number;
+    failed: number;
+    results: Array<{
+      email: string;
+      success: boolean;
+      name: string;
+      error: string;
+    }>;
+  }> {
+    const response = await fetch(`${API_BASE_URL}/send-bulk-email`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        emails,
+        subject,
+        message,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to send emails: ${response.statusText}`);
+    }
+
+    return response.json();
+  }
 
 }
 

@@ -21,8 +21,16 @@ class Settings(BaseSettings):
     DB_USER: str = "root"
     DB_PASSWORD: str = ""
     DB_NAME: str = "business_card_ocr"
-    
+
     DATABASE_URL: str = ""
+
+    # Email/SMTP settings
+    SMTP_HOST: str = "smtp.gmail.com"
+    SMTP_PORT: int = 587
+    SMTP_USER: str = ""
+    SMTP_PASSWORD: str = ""
+    EMAIL_FROM: str = ""
+    EMAIL_FROM_NAME: str = "ReCircle CardScan"
     
     @property
     def database_url(self) -> str:

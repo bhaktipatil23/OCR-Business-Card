@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import FileResponse
 from app.services.csv_writer import CSVWriter
+from app.config import settings
 import os
 
 router = APIRouter(prefix="/api/v1", tags=["download"])
@@ -71,16 +72,15 @@ async def download_latest_data():
     """Download CSV from most recent batch data"""
     try:
         import mysql.connector
-        import os as env_os
         import csv
         import tempfile
-        
+
         conn = mysql.connector.connect(
-            host=env_os.getenv('DB_HOST', 'localhost'),
-            port=int(env_os.getenv('DB_PORT', 3306)),
-            user=env_os.getenv('DB_USER', 'root'),
-            password=env_os.getenv('DB_PASSWORD', 'NewPassword123!'),
-            database=env_os.getenv('DB_NAME', 'business_card_ocr')
+            host=settings.DB_HOST,
+            port=settings.DB_PORT,
+            user=settings.DB_USER,
+            password=settings.DB_PASSWORD,
+            database=settings.DB_NAME
         )
         cursor = conn.cursor(dictionary=True)
         
@@ -158,16 +158,15 @@ async def download_saved_data(batch_id: str):
     """Download CSV from saved database data"""
     try:
         import mysql.connector
-        import os as env_os
         import csv
         import tempfile
-        
+
         conn = mysql.connector.connect(
-            host=env_os.getenv('DB_HOST', 'localhost'),
-            port=int(env_os.getenv('DB_PORT', 3306)),
-            user=env_os.getenv('DB_USER', 'root'),
-            password=env_os.getenv('DB_PASSWORD', 'NewPassword123!'),
-            database=env_os.getenv('DB_NAME', 'business_card_ocr')
+            host=settings.DB_HOST,
+            port=settings.DB_PORT,
+            user=settings.DB_USER,
+            password=settings.DB_PASSWORD,
+            database=settings.DB_NAME
         )
         cursor = conn.cursor(dictionary=True)
         

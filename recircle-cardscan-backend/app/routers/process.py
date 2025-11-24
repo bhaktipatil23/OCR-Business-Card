@@ -224,14 +224,14 @@ async def get_saved_data(batch_id: str):
     """Get saved extracted data from database"""
     try:
         import mysql.connector
-        import os
-        
+        from app.config import settings
+
         conn = mysql.connector.connect(
-            host=os.getenv('DB_HOST', 'localhost'),
-            port=int(os.getenv('DB_PORT', 3306)),
-            user=os.getenv('DB_USER', 'root'),
-            password=os.getenv('DB_PASSWORD', 'NewPassword123!'),
-            database=os.getenv('DB_NAME', 'business_card_ocr')
+            host=settings.DB_HOST,
+            port=settings.DB_PORT,
+            user=settings.DB_USER,
+            password=settings.DB_PASSWORD,
+            database=settings.DB_NAME
         )
         cursor = conn.cursor(dictionary=True)
         
@@ -280,14 +280,14 @@ async def get_recent_batches():
     """Get recent batch IDs for data recovery"""
     try:
         import mysql.connector
-        import os
-        
+        from app.config import settings
+
         conn = mysql.connector.connect(
-            host=os.getenv('DB_HOST', 'localhost'),
-            port=int(os.getenv('DB_PORT', 3306)),
-            user=os.getenv('DB_USER', 'root'),
-            password=os.getenv('DB_PASSWORD', 'NewPassword123!'),
-            database=os.getenv('DB_NAME', 'business_card_ocr')
+            host=settings.DB_HOST,
+            port=settings.DB_PORT,
+            user=settings.DB_USER,
+            password=settings.DB_PASSWORD,
+            database=settings.DB_NAME
         )
         cursor = conn.cursor(dictionary=True)
         

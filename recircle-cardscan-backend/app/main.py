@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.routers import upload, process, download, pdf_preview_simple, vcf_export, prompt_manager, extracted_data, save_data, process_single, websocket_router
+from app.routers import upload, process, download, pdf_preview_simple, vcf_export, prompt_manager, extracted_data, save_data, process_single, websocket_router, bulk_email
 from app.config import settings
 import os
 import logging
@@ -40,6 +40,7 @@ app.include_router(pdf_preview_simple.router, prefix="/api/v1")
 app.include_router(vcf_export.router, prefix="/api/v1")
 app.include_router(prompt_manager.router)
 app.include_router(extracted_data.router)
+app.include_router(bulk_email.router)
 # Removed field_update and email_lookup routers due to database dependency issues
 app.include_router(save_data.router)
 

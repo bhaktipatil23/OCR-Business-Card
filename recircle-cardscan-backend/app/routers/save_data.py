@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import List
 import mysql.connector
-import os
+from app.config import settings
 
 router = APIRouter(prefix="/api/v1", tags=["save-data"])
 
@@ -33,11 +33,11 @@ async def save_data(request: SaveDataRequest):
         }
         
         conn = mysql.connector.connect(
-            host=os.getenv('DB_HOST', 'localhost'),
-            port=int(os.getenv('DB_PORT', 3306)),
-            user=os.getenv('DB_USER', 'root'),
-            password=os.getenv('DB_PASSWORD', 'NewPassword123!'),
-            database=os.getenv('DB_NAME', 'business_card_ocr')
+            host=settings.DB_HOST,
+            port=settings.DB_PORT,
+            user=settings.DB_USER,
+            password=settings.DB_PASSWORD,
+            database=settings.DB_NAME
         )
         cursor = conn.cursor()
         
